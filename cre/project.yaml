@@ -1,0 +1,12 @@
+# CRE project settings (shape per docs.chain.link/cre/reference/project-configuration-ts; keys are target names).
+# staging-settings: simulation against a LOCAL anvil fork of Arc testnet (see scripts/local-chain.sh).
+staging-settings:
+  rpcs:
+    - chain-name: arc-testnet
+      url: http://127.0.0.1:8545
+
+# production-settings: real Arc testnet (chain id 5042002). Used for `cre workflow simulate --broadcast` on the real chain and `cre workflow deploy`.
+production-settings:
+  rpcs:
+    - chain-name: arc-testnet
+      url: https://rpc.testnet.arc.network

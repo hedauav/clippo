@@ -1,0 +1,23 @@
+{
+  "name": "clippo-cre",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-strip-types --test workflows/clippo-settlement/snapshot.test.ts",
+    "typecheck": "tsc --noEmit -p workflows/clippo-settlement/tsconfig.json",
+    "simulate": "cre workflow simulate ./workflows/clippo-settlement --target staging-settings --non-interactive --trigger-index 0",
+    "mock-backend": "node scripts/mock-backend.mjs",
+    "emulate": "node --experimental-strip-types --no-warnings scripts/emulate-delivery.mts",
+    "simulate:broadcast": "cre workflow simulate ./workflows/clippo-settlement --target staging-settings --non-interactive --trigger-index 0 --broadcast",
+    "compile": "cre-compile workflows/clippo-settlement/main.ts dist/clippo-settlement.wasm"
+  },
+  "dependencies": {
+    "@chainlink/cre-sdk": "^1.23.0",
+    "viem": "^2.0.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0"
+  }
+}

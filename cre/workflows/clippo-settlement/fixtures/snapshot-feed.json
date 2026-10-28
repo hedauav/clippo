@@ -1,0 +1,34 @@
+{
+  "description": "Shared by web (src/lib/snapshots.contract.test.ts) and cre (snapshot.test.ts). backendFeed = GET /api/snapshots/latest for the seeded scenario; normalized = what every CRE node must produce.",
+  "scenario": {
+    "campaigns": [
+      {
+        "onchainId": "7"
+      },
+      {
+        "onchainId": "12"
+      },
+      {
+        "onchainId": null
+      }
+    ]
+  },
+  "backendFeed": [
+    {
+      "campaignId": "7",
+      "creator": "0x1111111111111111111111111111111111111111",
+      "cumulativeViews": 1200
+    },
+    {
+      "campaignId": "7",
+      "creator": "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+      "cumulativeViews": 300
+    },
+    {
+      "campaignId": "12",
+      "creator": "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+      "cumulativeViews": 5000
+    }
+  ],
+  "normalized": "[{\"campaignId\":\"7\",\"creator\":\"0x1111111111111111111111111111111111111111\",\"cumulativeViews\":\"1200\"},{\"campaignId\":\"7\",\"creator\":\"0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD\",\"cumulativeViews\":\"300\"},{\"campaignId\":\"12\",\"creator\":\"0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD\",\"cumulativeViews\":\"5000\"}]"
+}

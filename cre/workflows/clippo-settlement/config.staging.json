@@ -1,0 +1,14 @@
+{
+  "schedule": "0 30 0 * * *",
+  "backendUrl": "http://127.0.0.1:8787",
+  "feedPath": "/api/snapshots/daily",
+  "maxStalenessDays": 2,
+  "maxRowsPerReport": 25,
+  "evm": {
+    "chainSelectorName": "arc-testnet",
+    "isTestnet": true,
+    "receiverAddress": "0xd7842e13512a45cd6a36def823b316befa75f033",
+    "gasLimit": "3000000",
+    "expectedWorkflowOwner": "0xE4b767eF80426935662AF3872103Cac3719b359f"
+  }
+}

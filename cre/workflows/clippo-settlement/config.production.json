@@ -1,0 +1,13 @@
+{
+  "schedule": "0 30 0 * * *",
+  "backendUrl": "https://REPLACE-WITH-PUBLIC-BACKEND-URL",
+  "feedPath": "/api/snapshots/daily",
+  "maxStalenessDays": 2,
+  "maxRowsPerReport": 25,
+  "evm": {
+    "chainSelectorName": "arc-testnet",
+    "isTestnet": true,
+    "receiverAddress": "0x0000000000000000000000000000000000000000",
+    "gasLimit": "3000000"
+  }
+}
