@@ -1,6 +1,6 @@
 {
   "schedule": "0 30 0 * * *",
-  "backendUrl": "https://REPLACE-WITH-PUBLIC-BACKEND-URL",
+  "backendUrl": "https://clippo-six.vercel.app",
   "feedPath": "/api/snapshots/daily",
   "maxStalenessDays": 2,
   "maxRowsPerReport": 25,
