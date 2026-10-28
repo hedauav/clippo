@@ -1,0 +1,62 @@
+# ---- secrets / env (keep only *.example) ----
+.env
+.env.*
+*.env
+!.env.example
+!**/.env.example
+*.bak
+*.bak[0-9]*
+*.bak.*
+*.pem
+*.key
+keystore*
+**/ADMIN_WALLET_IMPORT*
+signing-key*.json
+cre/scripts/.local-chain.env
+
+# ---- dependencies / build output ----
+node_modules/
+.next/
+.next*/
+out/
+cache/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+.vercel/
+
+# ---- local data ----
+**/.pgdata/
+pgdata/
+web/storage/
+test-*.db
+*.db
+*.db-journal
+*.log
+
+# ---- foundry broadcast: keep only the Arc testnet latest deploy ----
+contracts/broadcast/**
+!contracts/broadcast/
+!contracts/broadcast/Deploy.s.sol/
+!contracts/broadcast/Deploy.s.sol/5042002/
+!contracts/broadcast/Deploy.s.sol/5042002/run-latest.json
+
+# ---- screenshots / tool scratch ----
+design/shots/
+.playwright-mcp/
+.claude/
+
+# ---- internal PRDs (not for the public repo) ----
+Clippo — Product Requirements Document*
+Clippo — Unified PRD*
+*.pdf
+
+# ---- OS / editor junk ----
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+.idea/
+.vscode/
