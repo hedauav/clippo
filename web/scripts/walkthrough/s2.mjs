@@ -1,0 +1,15 @@
+import * as L from "./lib.mjs";
+const b = await L.launch();
+const { page, issues } = await L.walletPage(b, process.env.ADMIN_PRIVATE_KEY, "admin");
+await page.goto(L.BASE + "/", { waitUntil: "networkidle", timeout: 90000 });
+await page.getByRole("button", { name: "Connect wallet" }).first().click();
+await page.waitForTimeout(6000);
+await L.shot(page, "03-admin-signin");
+console.log(await page.locator("[role=dialog],[role=alertdialog]").allInnerTexts());
+console.log(JSON.stringify((await L.api(page, "/api/auth/me")).body));
+await page.goto(L.BASE + "/bench", { waitUntil: "networkidle", timeout: 90000 });
+await page.waitForTimeout(2000);
+await L.shot(page, "04-bench-admin");
+console.log((await page.innerText("body")).slice(0, 900).replace(/\s+/g, " "));
+console.log(issues);
+await b.close();

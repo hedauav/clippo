@@ -1,0 +1,4 @@
+.wp-item { display: flex; align-items: center; gap: 12px; justify-content: flex-start; }
+.wp-item img { border-radius: 6px; flex: none; }
+.wp-dot { width: 24px; height: 24px; border-radius: 6px; background: currentColor; opacity: 0.2; flex: none; }
+.wp-links { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }

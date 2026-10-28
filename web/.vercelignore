@@ -1,0 +1,21 @@
+# Never upload secrets or local state (patterns are anchored to web/: an unanchored "storage" would also match src/lib/storage)
+/.env
+/.env.*
+!/.env.example
+/ADMIN_WALLET_IMPORT.txt
+*.bak
+*.bak[0-9]
+# Local data
+/storage
+/.pgdata
+/backups
+/prisma/dev.db
+# Dev tooling / artefacts (scripts/ itself is kept: src/test/global-setup.ts imports scripts/pg-local-lib.mjs during type-check)
+/scripts/walkthrough
+/design
+/design-shots
+/shots
+/coverage
+/.next
+/node_modules
+/tsconfig.tsbuildinfo

@@ -1,0 +1,623 @@
+// Clippo data model. Local dev uses SQLite; the schema is Postgres-compatible.
+// To switch: set provider = "postgresql" and DATABASE_URL to a Postgres URL.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CAMPAIGNER
+  CREATOR
+  ADMIN
+}
+
+enum Platform {
+  YOUTUBE
+  X
+  INSTAGRAM
+}
+
+enum PayoutMode {
+  PER_VIEW
+  HUMAN_SPLIT
+  POOL_SHARE
+}
+
+enum PoolShareBasis {
+  VIEWS
+  APPROVED_CLIPS
+}
+
+enum Approver {
+  CAMPAIGNER_ONLY
+  CAMPAIGNER_AND_ADMIN
+}
+
+enum Eligibility {
+  ANYONE_VERIFIED
+  HIGHER_RANKED
+}
+
+enum ContentSource {
+  UPLOAD
+  LINK
+  AI_GENERATED
+}
+
+enum CampaignStatus {
+  DRAFT
+  FUNDED
+  APPROVED
+  REJECTED
+  CLOSED
+}
+
+enum VerdictResult {
+  APPROVE
+  REJECT
+  NEEDS_HUMAN
+}
+
+enum AppealStatus {
+  NONE
+  PENDING
+  UPHELD
+  OVERTURNED
+}
+
+enum PayoutStatus {
+  PENDING
+  CLAIMED
+}
+
+model User {
+  id               String       @id @default(cuid())
+  role             Role
+  wallet           String       @unique
+  worldIdNullifier String?      @unique
+  verified         Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  channels         Channel[]
+  campaigns        Campaign[]
+  submissions      Submission[]
+  payouts          Payout[]
+}
+
+model Channel {
+  id               String       @id @default(cuid())
+  userId           String
+  user             User         @relation(fields: [userId], references: [id])
+  platform         Platform
+  handle           String
+  externalId       String?
+  verificationCode String
+  verified         Boolean      @default(false)
+  accessTokenEnc   String? // AES-GCM encrypted OAuth token (Instagram creator OAuth); never returned by the API
+  tokenExpiresAt   DateTime?
+  createdAt        DateTime     @default(now())
+  submissions      Submission[]
+
+  @@unique([platform, handle])
+}
+
+model Campaign {
+  id             String         @id @default(cuid())
+  campaignerId   String
+  campaigner     User           @relation(fields: [campaignerId], references: [id])
+  title          String
+  // Structured story: { summary, topic, requiredPoints[], prohibitedClaims[], disclosureLabel, attribution, description }
+  story          Json
+  contentSource  ContentSource
+  contentUrl     String?
+  platforms      Json // Platform[]
+  payoutMode     PayoutMode
+  poolShareBasis PoolShareBasis?
+  approver       Approver?
+  poolSize       Float
+  ratePer1k      Float?
+  viewTarget     Int?
+  eligibility    Eligibility    @default(ANYONE_VERIFIED)
+  status         CampaignStatus @default(DRAFT)
+  onchainId      String?
+  fundTxHash     String?
+  rejectReason   String?
+  // ---- chain-sourced (set by the indexer / verified receipts, never by client claims) ----
+  highValue        Boolean  @default(false) // pool > on-chain high-value threshold: approvals need a fresh human attestation
+  grossFunded      Float? // USDC pulled from the campaigner (incl. fee)
+  campaignerFee    Float?
+  campaignerFeeBps Int?
+  creatorFeeBps    Int?
+  approvalAttestation String? // bytes32 recorded on-chain for high-value approval
+  adminReviewReason   String? // set when an on-chain approve arrived but the launch gate (AI source) is not satisfied: stays FUNDED until an admin resolves it
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  submissions    Submission[]
+  snapshots      ViewSnapshot[]
+  payouts        Payout[]
+}
+
+model Submission {
+  id          String         @id @default(cuid())
+  campaignId  String
+  campaign    Campaign       @relation(fields: [campaignId], references: [id])
+  creatorId   String
+  creator     User           @relation(fields: [creatorId], references: [id])
+  channelId   String
+  channel     Channel        @relation(fields: [channelId], references: [id])
+  link        String
+  videoId     String
+  transcript  String?
+  transcriptHash String?
+  metadata    Json
+  createdAt   DateTime       @default(now())
+  verdict     Verdict?
+  snapshots   ViewSnapshot[]
+  // ---- anti-fraud: clip deleted after approval -> excluded from the view feed, unclaimed balance frozen ----
+  clipStatus  String         @default("LIVE") // LIVE | DELETED
+  deletedAt   DateTime?
+
+  @@unique([campaignId, videoId])
+}
+
+model Verdict {
+  id             String        @id @default(cuid())
+  submissionId   String        @unique
+  submission     Submission    @relation(fields: [submissionId], references: [id])
+  result         VerdictResult
+  confidence     Float
+  reason         String
+  decidedBy      String        @default("AI") // AI | HUMAN
+  deciderId      String?
+  appealStatus   AppealStatus  @default(NONE)
+  appealNote     String?
+  flags          Json? // string[]: duplicate, injection, unreadable, ...
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model ViewSnapshot {
+  id              String     @id @default(cuid())
+  campaignId      String
+  campaign        Campaign   @relation(fields: [campaignId], references: [id])
+  submissionId    String
+  submission      Submission @relation(fields: [submissionId], references: [id])
+  creatorId       String
+  day             String // YYYY-MM-DD (UTC)
+  cumulativeViews Int
+  createdAt       DateTime   @default(now())
+
+  @@unique([submissionId, day])
+  @@index([campaignId, day])
+}
+
+model Payout {
+  id         String       @id @default(cuid())
+  campaignId String
+  campaign   Campaign     @relation(fields: [campaignId], references: [id])
+  creatorId  String
+  creator    User         @relation(fields: [creatorId], references: [id])
+  amount     Float // USDC
+  status     PayoutStatus @default(PENDING)
+  claimTxHash String?
+  createdAt  DateTime     @default(now())
+  claimedAt  DateTime?
+  // ---- chain-sourced ----
+  claimedAmount Float     @default(0) // gross USDC claimed on-chain so far (status CLAIMED when >= amount)
+  releaseAt     DateTime? // PER_VIEW retention: earliest time the latest credit is claimable
+  frozen        Boolean   @default(false) // deleted clip / fraud hold: claims refused by the API
+  frozenReason  String?
+}
+
+// ===== Wallet sign-in, chain sync, human attestations, split approvals, fraud flags (chain/trust agent) =====
+model AuthNonce {
+  nonce     String    @id
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+// One row per processed escrow log: makes the indexer idempotent.
+model ChainEvent {
+  id          String   @id @default(cuid())
+  txHash      String
+  logIndex    Int
+  blockNumber Int
+  name        String
+  createdAt   DateTime @default(now())
+
+  @@unique([txHash, logIndex])
+}
+
+model ChainCursor {
+  key       String   @id
+  lastBlock Int
+  updatedAt DateTime @updatedAt
+}
+
+// A World ID proof may be consumed once; the hash is of (proof, nullifier, merkle_root).
+model UsedProof {
+  proofHash String   @id
+  userId    String
+  action    String
+  createdAt DateTime @default(now())
+}
+
+// A fresh human confirmation bound to one approval action; `attestation` is the bytes32 recorded on-chain.
+model HumanAttestation {
+  id          String   @id @default(cuid())
+  campaignId  String
+  userId      String
+  kind        String // APPROVE | SPLIT
+  splitHash   String?
+  attestation String
+  proofHash   String
+  createdAt   DateTime @default(now())
+
+  @@unique([attestation])
+  @@index([campaignId, kind])
+}
+
+// HUMAN_SPLIT approval state (two-party when campaign.approver = CAMPAIGNER_AND_ADMIN).
+model SplitProposal {
+  id                      String    @id @default(cuid())
+  campaignId              String
+  splitHash               String // keccak256(abi.encode(creators[], amounts[])) over wallet-sorted entries
+  splits                  Json // [{ creatorWallet, amount, units }] sorted by wallet
+  status                  String    @default("PENDING") // PENDING | AWAITING_CHAIN | FINALIZED | SUPERSEDED
+  campaignerApprovedAt    DateTime?
+  campaignerAttestation   String?
+  adminApprovedAt         DateTime?
+  adminAttestation        String?
+  adminId                 String?
+  finalizedAt             DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  @@index([campaignId, status])
+}
+
+// Agent Pass (World AgentKit): the AI split proposer is an agent wallet registered in AgentBook and bound to a campaign by
+// the campaigner. Agents only PROPOSE; a human completes a fresh World ID check before anything is released.
+model AgentIdentity {
+  id         String   @id @default(cuid())
+  campaignId String
+  ownerId    String // campaigner who delegated the agent to this campaign
+  address    String // lower-case agent wallet
+  humanId    String // anonymous human identifier AgentBook resolved the wallet to (or a demo id)
+  mode       String // agentbook | demo
+  status     String   @default("ACTIVE") // ACTIVE | REVOKED
+  createdAt  DateTime @default(now())
+
+  @@unique([campaignId, address])
+  @@index([campaignId])
+}
+
+// A split the agent proposed, signed with its AgentKit (SIWE) payload. It moves no money.
+model AgentProposal {
+  id         String   @id @default(cuid())
+  campaignId String
+  agentId    String
+  splitHash  String
+  splits     Json // [{ creatorWallet, amount, units }] sorted by wallet
+  rationale  String
+  meta       Json? // { source: llm|deterministic, model, confidence, flags[], fallback? }; per-creator reasons live in splits[].reason. Advisory, not covered by the signature (the hash binds the amounts)
+  nonce      String   @unique
+  payload    Json // the signed AgentKit payload
+  expiresAt  DateTime
+  status     String   @default("PROPOSED") // PROPOSED | APPROVED | SUPERSEDED | EXPIRED
+  createdAt  DateTime @default(now())
+
+  @@index([campaignId, status])
+}
+
+// Append-only record of every Agent Pass step, including each refusal (the action stays undone).
+model AgentAudit {
+  id          String   @id @default(cuid())
+  campaignId  String
+  proposalId  String?
+  actorId     String?
+  actorRole   String? // AGENT | CAMPAIGNER | ADMIN
+  event       String // DELEGATED | PROPOSED | APPROVED | REFUSED
+  outcome     String // OK | CANCELLED | EXPIRED_PROOF | PROPOSAL_EXPIRED | REPLAYED | WRONG_APPROVER | SPLIT_CHANGED | ALREADY_RELEASED | ALREADY_APPROVED | PROOF_INVALID | AGENT_UNVERIFIED | REFUSED
+  code        String?
+  detail      String
+  splitHash   String?
+  proofStatus String? // VALID | NONE | CANCELLED | EXPIRED | REPLAYED | INVALID
+  source      String   @default("server") // server | client
+  createdAt   DateTime @default(now())
+
+  @@index([campaignId, createdAt])
+}
+
+model FraudFlag {
+  id           String    @id @default(cuid())
+  kind         String // VIEW_ANOMALY | CLIP_DELETED
+  campaignId   String
+  submissionId String
+  day          String // YYYY-MM-DD (UTC) when detected
+  details      Json
+  status       String    @default("OPEN") // OPEN | DISMISSED | CONFIRMED
+  createdAt    DateTime  @default(now())
+  resolvedAt   DateTime?
+  resolvedBy   String?
+
+  @@unique([submissionId, kind, day])
+  @@index([status, kind])
+}
+
+// ---- Creator workspace (hire specific creators). No relations to other models by design (joined manually by id). ----
+model CreatorProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  displayName String
+  bio         String   @default("")
+  niches      Json // string[]
+  rateCard    Json // [{ label, platform?, price }] set by the creator, USDC
+  listed      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model HireBrief {
+  id           String   @id @default(cuid())
+  campaignerId String
+  title        String
+  story        Json // same shape as Campaign.story
+  deliverables Json // string[]
+  platforms    Json // Platform[]
+  deadline     String? // YYYY-MM-DD
+  notes        String   @default("")
+  createdAt    DateTime @default(now())
+
+  @@index([campaignerId])
+}
+
+model Shortlist {
+  id         String          @id @default(cuid())
+  ownerId    String
+  title      String
+  shareToken String          @unique
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([ownerId])
+}
+
+model ShortlistItem {
+  id          String   @id @default(cuid())
+  shortlistId String
+  creatorId   String
+  note        String   @default("")
+  createdAt   DateTime @default(now())
+
+  @@unique([shortlistId, creatorId])
+}
+
+// A "hire": a set of specific creators with per-creator approvals; fund-all turns it into one HUMAN_SPLIT campaign.
+model Hire {
+  id           String   @id @default(cuid())
+  campaignerId String
+  briefId      String?
+  title        String
+  shareToken   String   @unique
+  status       String   @default("OPEN") // OPEN | FUNDING (campaign created, creators locked)
+  campaignId   String?  @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([campaignerId])
+}
+
+model HireCreator {
+  id        String   @id @default(cuid())
+  hireId    String
+  creatorId String
+  rateLabel String
+  quantity  Int      @default(1)
+  amount    Float // price x quantity, USDC (the preset split amount)
+  status    String   @default("PROPOSED") // PROPOSED | APPROVED | REJECTED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([hireId, creatorId])
+  @@index([creatorId])
+}
+
+// ---- Platforms / source content / AI agents / appeals (platform-agents module) ----
+// Plain string ids (no FK relations) so this module never edits other models. States are strings, validated in code.
+
+model SourceAsset {
+  id          String   @id @default(cuid())
+  ownerId     String
+  campaignId  String? // set once attached to a campaign
+  kind        String // UPLOAD | LINK | AI_GENERATED
+  filename    String? // sanitized display name
+  storageKey  String? // key inside the storage provider (UPLOAD / AI_GENERATED)
+  mime        String?
+  size        Int?
+  linkUrl     String? // LINK
+  aiGenerated Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([campaignId])
+  @@index([ownerId])
+}
+
+model VideoJob {
+  id               String    @id @default(cuid())
+  campaignId       String? // may be created before the campaign exists (wizard); attached later
+  requestedById    String
+  prompt           String
+  provider         String
+  providerJobId    String?
+  status           String    @default("QUEUED") // QUEUED | RUNNING | SUCCEEDED | FAILED
+  error            String?
+  outputAssetId    String?
+  aiGenerated      Boolean   @default(true)
+  rightsConfirmed  Boolean   @default(false)
+  approvalStatus   String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  approvedById     String?
+  approvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([campaignId])
+}
+
+// Campaigner-published negotiation band for a campaign (public to creators) plus a private auto-accept ceiling.
+model DealTerms {
+  campaignId     String   @id
+  minRate        Float // USDC per 1k views
+  maxRate        Float
+  autoAcceptUpTo Float? // campaigner's standing consent: creator offers at or below this are pre-accepted by the campaigner
+  updatedAt      DateTime @updatedAt
+}
+
+model Deal {
+  id                 String   @id @default(cuid())
+  campaignId         String
+  campaignerId       String
+  creatorId          String
+  status             String   @default("PROPOSED") // PROPOSED | COUNTERED | ACCEPTED | DECLINED | EXPIRED
+  creatorMinRate     Float? // private floor set by the creator
+  offers             Json // [{by: creator|campaigner|negotiator, rate, note, at}]
+  creatorAccepted    Boolean  @default(false)
+  campaignerAccepted Boolean  @default(false)
+  acceptedRate       Float?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([campaignId, creatorId])
+}
+
+model Appeal {
+  id            String    @id @default(cuid())
+  submissionId  String    @unique
+  verdictId     String
+  campaignId    String
+  creatorId     String
+  campaignerId  String
+  stage         String    @default("CAMPAIGNER") // CAMPAIGNER | ADMIN (current owner)
+  status        String    @default("OPEN") // OPEN | UPHELD | OVERTURNED
+  note          String
+  escalatedAt   DateTime?
+  escalatedBy   String?
+  resolution    String?
+  resolvedById  String?
+  resolvedAt    DateTime?
+  dueAt         DateTime // campaigner SLA; after this an admin may take over
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([campaignerId])
+  @@index([stage, status])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  refType   String?
+  refId     String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+}
+
+// ---- Optional modules (FEATURE_STATUS_LADDER / FEATURE_REFERRAL / FEATURE_TOKENIZATION). No relations by design. ----
+model CreatorStatus {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  tier       String? // VERIFIED | RISING | PARTNER | TOP (null = not verified)
+  metrics    Json // { approvedClips, reviewedClips, approveRate, fraudFlags, verifiedViews }
+  computedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model ReferralLink {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  referrerId String
+  campaignId String
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@unique([referrerId, campaignId])
+}
+
+model ReferralAttribution {
+  id         String   @id @default(cuid())
+  refereeId  String   @unique // one referrer per referee, first attribution wins
+  referrerId String
+  linkId     String
+  campaignId String
+  createdAt  DateTime @default(now())
+
+  @@index([referrerId])
+}
+
+model ReferralCredit {
+  id         String   @id @default(cuid())
+  referrerId String
+  refereeId  String
+  campaignId String
+  activity   Float // USDC of activity brought in
+  amount     Float // USDC credited to the referrer
+  createdAt  DateTime @default(now())
+
+  @@index([referrerId, createdAt])
+}
+
+model ReferrerState {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  frozen       Boolean   @default(false)
+  frozenReason String?
+  credited     Float     @default(0)
+  lastCreditAt DateTime?
+  updatedAt    DateTime  @updatedAt
+}
+
+model OnchainProfile {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  optedIn      Boolean   @default(false)
+  payload      Json? // last synced { tier, approvedClips, rejectedClips, totalViews, totalEarnedUsdc }
+  payloadHash  String?
+  syncedAt     DateTime?
+  txHash       String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+// ---- Fiat on-ramp (Transak). Plain ids, no relations. ----
+model OnrampOrder {
+  id              String   @id @default(cuid())
+  userId          String
+  campaignId      String?
+  amount          Float
+  status          String   @default("CREATED") // CREATED | provider status (PROCESSING, COMPLETED, FAILED, ...)
+  providerOrderId String?
+  payload         Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// Fixed-window rate limiter for serverless (no shared memory between instances): one row per (bucket key, window start).
+model RateLimitBucket {
+  key         String
+  windowStart DateTime
+  count       Int      @default(1)
+
+  @@id([key, windowStart])
+  @@index([windowStart])
+}

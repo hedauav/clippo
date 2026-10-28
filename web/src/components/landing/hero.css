@@ -1,0 +1,69 @@
+/* Landing hero: "front page" masthead. Uses only the global tokens. */
+.hx { padding-block: 20px 56px; border-top: 3px double var(--rule); margin-top: 8px; }
+.hx > * { min-width: 0; }
+.hx-kicker { display: flex; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid var(--rule); }
+.hx-k-mid { color: var(--ink-3); }
+.hx-h { font-size: clamp(2.9rem, 8.6vw, 7.4rem); line-height: 0.88; letter-spacing: -0.035em; margin: 22px 0 32px; overflow-wrap: normal; }
+.hx-h em { padding-right: 0.04em; }
+.hx-body { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: clamp(28px, 5vw, 72px); align-items: start; border-top: 3px solid var(--rule); padding-top: 28px; }
+.hx-body > * { min-width: 0; }
+.hx-cta { display: flex; flex-wrap: wrap; gap: 14px 18px; margin-top: 28px; }
+.hx-cta .btn { min-height: 52px; }
+.hx-fine { margin-top: 24px; max-width: 46ch; text-transform: none; letter-spacing: 0.02em; line-height: 1.5; }
+
+/* the desk */
+.hx-desk { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin: 0; position: relative; }
+.hx-slip { display: grid; grid-template-columns: minmax(0, 1fr) auto; background: var(--paper-2); border: 1.5px solid var(--ink); transform: rotate(-0.8deg); box-shadow: var(--press); }
+.hx-slip-main { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; padding: 16px 18px 14px; }
+.hx-slip-t { font-size: clamp(1.3rem, 2.4vw, 1.75rem); line-height: 1.02; margin-bottom: 8px; }
+.hx-pool { font-size: clamp(1.7rem, 5.2vw, 3.4rem); font-weight: 500; letter-spacing: -0.05em; line-height: 1; color: var(--signal); }
+.hx-slip-stub {
+  display: grid; align-content: center; justify-items: center; gap: 2px; padding: 12px 14px; text-align: center;
+  border-left: 2px dashed var(--ink); position: relative;
+}
+.hx-slip-stub::before, .hx-slip-stub::after { content: ""; position: absolute; left: -9px; width: 16px; height: 16px; border-radius: 50%; background: var(--paper); border: 1.5px solid var(--ink); }
+.hx-slip-stub::before { top: -9px; clip-path: inset(50% 0 0 0); }
+.hx-slip-stub::after { bottom: -9px; clip-path: inset(0 0 50% 0); }
+
+.hx-entry { position: relative; min-width: 0; display: grid; gap: 8px; padding: 14px 16px; background: var(--paper); border: 1px solid var(--rule); }
+.hx-e1 { margin-left: clamp(0px, 4vw, 40px); }
+.hx-e2 { margin-right: clamp(0px, 4vw, 40px); }
+.hx-e-head { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--rule-soft); padding-bottom: 6px; font-size: 0.85rem; }
+.hx-quote { font-family: var(--f-display); font-size: 1.2rem; line-height: 1.2; padding-right: 8.5rem; min-height: 3.2rem; }
+.hx-quote mark { background: none; color: inherit; text-decoration: underline wavy var(--no) 1.5px; text-underline-offset: 4px; }
+.hx-stampbox { position: absolute; right: 12px; top: 40px; }
+.hx-margin { font-style: italic; font-size: 0.9rem; line-height: 1.45; color: var(--ink-2); padding-left: 16px; position: relative; max-width: 60ch; }
+.hx-margin::before { content: ""; position: absolute; left: 0; top: 2px; bottom: 2px; width: 7px; border: 1.5px solid var(--ink-3); border-right: 0; }
+
+.hx-pay { display: flex; align-items: baseline; gap: 8px; padding: 2px 4px 2px 12px; margin-left: clamp(0px, 4vw, 40px); font-size: 0.9rem; border-left: 3px solid var(--ok); }
+.hx-dots { flex: 1; min-width: 12px; border-bottom: 2px dotted var(--ink-3); transform: translateY(-3px); }
+.hx-amt { font-weight: 700; color: var(--ok); }
+.hx-settled { border: 1px solid var(--ok); color: var(--ok); padding: 1px 6px; }
+
+/* choreography: ticker, approve stamp, payout settles, then the reject lands */
+.hx .hx-e1 .stamp { animation-delay: 700ms; }
+.hx .hx-e2 .stamp { animation-delay: 2600ms; }
+.hx-pay { animation: hx-in 400ms 1300ms both; }
+.hx-e2 { animation: hx-in 400ms 2200ms both; }
+@keyframes hx-in { from { opacity: 0; transform: translateY(8px); } }
+
+@media (max-width: 960px) {
+  .hx-body { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+}
+@media (max-width: 700px) { .hx-h { font-size: clamp(2.9rem, 13.4vw, 5.2rem); } }
+@media (max-width: 520px) {
+  .hx { padding-bottom: 40px; }
+  .hx-k-mid { display: none; }
+  .hx-quote { padding-right: 0; min-height: 0; }
+  .hx-stampbox { position: static; justify-self: start; }
+  .hx-cta .btn { width: 100%; }
+  .hx-slip { grid-template-columns: minmax(0, 1fr); }
+  .hx-slip-stub { display: none; }
+  .hx-e1, .hx-e2, .hx-pay { margin-inline: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hx-pay, .hx-e2 { animation: none; }
+}
+.hx-pay { flex-wrap: wrap; min-width: 0; }
+.hx-pay > * { min-width: 0; }
+@media (max-width: 360px) { .hx-dots { display: none; } .hx-pay { gap: 4px 8px; } }
