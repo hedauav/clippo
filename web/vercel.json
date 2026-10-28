@@ -3,7 +3,7 @@
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "installCommand": "npm ci",
-  "regions": ["bom1"],
+  "regions": ["iad1"],
   "functions": {
     "src/app/api/uploads/**/route.ts": { "maxDuration": 60 },
     "src/app/api/ai-video/**/route.ts": { "maxDuration": 300 },
@@ -18,9 +18,9 @@
     "src/app/api/cron/**/route.ts": { "maxDuration": 300 }
   },
   "crons": [
-    { "path": "/api/cron/chain-sync", "schedule": "*/5 * * * *" },
-    { "path": "/api/cron/video-jobs", "schedule": "*/5 * * * *" },
-    { "path": "/api/cron/snapshots-refresh", "schedule": "0 6,12,18 * * *" },
+    { "path": "/api/cron/chain-sync", "schedule": "20 1 * * *" },
+    { "path": "/api/cron/video-jobs", "schedule": "40 1 * * *" },
+    { "path": "/api/cron/snapshots-refresh", "schedule": "0 6 * * *" },
     { "path": "/api/cron/snapshots-freeze", "schedule": "10 0 * * *" },
     { "path": "/api/cron/status-ladder", "schedule": "30 0 * * *" }
   ]
