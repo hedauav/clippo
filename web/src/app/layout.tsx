@@ -50,6 +50,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <a className="skip" href="#main">
           Skip to content
         </a>
+        <TestnetBanner />
         <InkFilter />
         <Dateline />
         <Suspense fallback={<header className="masthead" style={{ minHeight: 96 }} />}>
