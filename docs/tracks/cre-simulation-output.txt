@@ -1,0 +1,83 @@
+# NOTE: this is NOT `cre workflow simulate` output (that command requires `cre login`, not possible in the build environment).
+# It runs the workflow's own fetch/normalise/staleness/chunk/ABI-encode code (snapshot.ts) and delivers each report through the real
+# Arc-testnet MockKeystoneForwarder on a local anvil fork, i.e. the same on-chain call the simulator makes with --broadcast.
+# chain: anvil fork of Arc testnet (chainId 5042002), block 69445918
+# forwarder (Arc testnet MockKeystoneForwarder) code bytes: 7387
+MockUSDC 0x10E5cA53C5Ca774624C9Fd25246a9072eFE38636
+ClippoEscrow 0x97bA15bDe28FF79C87c3eFa43D7efC7db3E000C5
+ClippoReportReceiver 0x67F52294eCEC440C3186dC3B9eb9E9d6c9589F01
+campaignCount 12
+wrote /c/Users/anish/OneDrive/Documents/Desktop/ETH/cre/scripts/.local-chain.env
+updated receiverAddress in /c/Users/anish/OneDrive/Documents/Desktop/ETH/cre/scripts/../workflows/clippo-settlement/config.staging.json
+
+=== scenario: fixture  ===
+snapshot day=2026-10-27 rows=3
+batch 1/1: 3 rows, tx 0x9ebf0ecc6dee9836048ca28160c0184b859e578814f5d76f42cbfd1aa11228b1 status=success
+   ReportProcessed {"items":"3","failed":"0"}
+   ViewsReported {"campaignId":"7","creator":"0x1111111111111111111111111111111111111111","cumulativeViews":"1200","deltaViews":"1200","credited":"12000000"}
+   ViewsReported {"campaignId":"7","creator":"0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD","cumulativeViews":"300","deltaViews":"300","credited":"3000000"}
+   ViewsReported {"campaignId":"12","creator":"0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD","cumulativeViews":"5000","deltaViews":"5000","credited":"997500"}
+
+campaign creator                                    views  credited(USDC base units)
+       7 0x1111111111111111111111111111111111111111 0->1200  0->12000000
+       7 0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD 0->300  0->3000000
+      12 0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD 0->5000  0->997500
+exit=0
+
+=== scenario: fixture  ===
+snapshot day=2026-10-27 rows=3
+batch 1/1: 3 rows, tx 0x0e6b734b033a9d3b8b4427871ce876ba8fd3d63699ef5466deb650da1364f213 status=success
+   ReportProcessed {"items":"3","failed":"0"}
+   ViewsReported {"campaignId":"7","creator":"0x1111111111111111111111111111111111111111","cumulativeViews":"1200","deltaViews":"0","credited":"0"}
+   ViewsReported {"campaignId":"7","creator":"0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD","cumulativeViews":"300","deltaViews":"0","credited":"0"}
+   ViewsReported {"campaignId":"12","creator":"0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD","cumulativeViews":"5000","deltaViews":"0","credited":"0"}
+
+campaign creator                                    views  credited(USDC base units)
+       7 0x1111111111111111111111111111111111111111 1200->1200  12000000->12000000
+       7 0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD 300->300  3000000->3000000
+      12 0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD 5000->5000  997500->997500
+exit=0
+
+=== scenario: bump  ===
+snapshot day=2026-10-27 rows=3
+batch 1/1: 3 rows, tx 0x26626522fb2102cc4d18e04d01ad30d88b61529c2c9ec1871ab5ec701f67ac92 status=success
+   ReportProcessed {"items":"3","failed":"0"}
+   ViewsReported {"campaignId":"7","creator":"0x1111111111111111111111111111111111111111","cumulativeViews":"1300","deltaViews":"100","credited":"1000000"}
+   ViewsReported {"campaignId":"7","creator":"0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD","cumulativeViews":"300","deltaViews":"0","credited":"0"}
+   ViewsReported {"campaignId":"12","creator":"0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD","cumulativeViews":"5000","deltaViews":"0","credited":"0"}
+
+campaign creator                                    views  credited(USDC base units)
+       7 0x1111111111111111111111111111111111111111 1200->1300  12000000->13000000
+       7 0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD 300->300  3000000->3000000
+      12 0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD 5000->5000  997500->997500
+exit=0
+
+=== scenario: empty  ===
+snapshot day=2026-10-27 rows=0
+no-op: empty snapshot
+exit=0
+
+=== scenario: stale  ===
+REJECTED (staleness guard): snapshot day 2026-10-23 is stale (5d old, max 2d)
+exit=1
+
+=== scenario: large --large-rows 60 ===
+snapshot day=2026-10-27 rows=60
+batch 1/3: 25 rows, tx 0xbda6923708a4e70eaacf3092405f25ed1316c7844e4f12eb2b7b04d20ec8f926 status=success
+   ReportProcessed {"items":"25","failed":"0"}
+batch 2/3: 25 rows, tx 0x54bd88790d6ee12016a625d78ac7919becc43ea127d9cbc3be4cdb993a90ea10 status=success
+   ReportProcessed {"items":"25","failed":"0"}
+batch 3/3: 10 rows, tx 0xe928883902b561a97f60ffefdbe3ef8442071e9060b7c3bd3b934b11c39c3c16 status=success
+   ReportProcessed {"items":"10","failed":"0"}
+
+campaign creator                                    views  credited(USDC base units)
+       7 0x0000000000000000000000000000000000001000 0->100  0->1000000
+       7 0x0000000000000000000000000000000000001002 0->102  0->1020000
+       7 0x0000000000000000000000000000000000001004 0->104  0->1040000
+       7 0x0000000000000000000000000000000000001006 0->106  0->1060000
+       7 0x0000000000000000000000000000000000001008 0->108  0->1080000
+       7 0x000000000000000000000000000000000000100A 0->110  0->1100000
+       7 0x000000000000000000000000000000000000100C 0->112  0->1120000
+       7 0x000000000000000000000000000000000000100e 0->114  0->1140000
+... 52 more rows; campaign 12 pool exhausted after the first credits (cap enforced)
+exit=0
